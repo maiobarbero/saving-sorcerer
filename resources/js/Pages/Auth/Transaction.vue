@@ -1,6 +1,6 @@
 <template>
     <Head>
-        <title>Transaction id:</title>
+        <title>Transaction id: {{transaction.id}}</title>
     </Head>
     <div class="mt-8 max-w-screen-xl mx-auto">
         <div

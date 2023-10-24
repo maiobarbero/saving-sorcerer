@@ -18,7 +18,7 @@ class Transaction extends Model
         'amount',
         'description',
         'date',
-        'bank_account'
+        'bank_account_id'
     ];
 
     public function user(): BelongsTo

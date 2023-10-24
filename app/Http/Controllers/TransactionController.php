@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BankAccount;
 use App\Models\Category;
-use App\Models\User;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Request;
+use Illuminate\Http\Request;
 
 class TransactionController extends Controller
 {
@@ -17,7 +15,7 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $filters = $request::only(['search', 'category', 'dateFrom', 'dateFrom', 'dateTo', 'bank']);
+        $filters = $request->only(['search', 'category', 'dateFrom', 'dateFrom', 'dateTo', 'bank']);
 
         return Inertia::render('Auth/Transactions', [
             'transactions' => Auth::user()
@@ -41,7 +39,10 @@ class TransactionController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Auth/TransactionForm');
+        return Inertia::render('Auth/TransactionForm',[
+            'categories' => Category::all(['id','name']),
+            'bankAccounts' =>Auth::user()->bank_accounts()->get()
+        ]);
     }
 
     /**
@@ -49,7 +50,31 @@ class TransactionController extends Controller
      */
     public function store(Request $request)
     {
-        return Inertia::render('Auth/TransactionForm');
+        $request->validate([
+            'amount' => 'required',
+            'description' => 'required|string',
+            'date' => 'required',
+            'bank_account_id' => 'required',
+            'category_id' => 'required'
+
+        ]);
+        try {
+
+            Transaction::create([
+                'user_id' => Auth::id(),
+                'category_id' => $request->input('category_id'),
+                'amount' => (float) $request->input('amount'),
+                'description' => $request->input('description'),
+                'date' => $request->input('date'),
+                'bank_account_id' => $request->input('bank_account_id')
+            ]);
+            session()->flash('success', "Transaction created!");
+
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+            return redirect()->route('transactions.create');
+        }
+        return redirect()->route('transactions.index');
     }
 
     /**
@@ -78,7 +103,15 @@ class TransactionController extends Controller
      */
     public function edit(string $id)
     {
-        return Inertia::render('Auth/TransactionForm');
+        $transaction = Auth::user()
+            ->transactions()
+            ->find($id);
+
+        return Inertia::render('Auth/TransactionForm',[
+            'categories' => Category::all(['id','name']),
+            'bankAccounts' =>Auth::user()->bank_accounts()->get(),
+            'transaction' => $transaction
+        ]);
     }
 
     /**
@@ -86,7 +119,32 @@ class TransactionController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        return Inertia::render('Auth/TransactionForm');
+        $transaction = Transaction::find($id);
+
+        $request->validate([
+            'amount' => 'required',
+            'description' => 'required|string',
+            'date' => 'required',
+            'bank_account_id' => 'required',
+            'category_id' => 'required'
+
+        ]);
+        try {
+            $transaction->update([
+                'user_id' => Auth::id(),
+                'category_id' => $request->input('category_id'),
+                'amount' => (float) $request->input('amount'),
+                'description' => $request->input('description'),
+                'date' => $request->input('date'),
+                'bank_account_id' => $request->input('bank_account_id')
+            ]);
+            session()->flash('success', "Transaction Updated!");
+
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+            return redirect()->route('transactions.create');
+        }
+        return redirect()->route('transactions.index');
     }
 
     /**
@@ -98,7 +156,7 @@ class TransactionController extends Controller
             $transaction = Auth::user()->transactions()->find($id);
             $transaction->delete();
             session()->flash('success', "Transaction $id deleted");
-         
+
 
         } catch (\Exception $e) {
             session()->flash('error', "Transaction not found");
